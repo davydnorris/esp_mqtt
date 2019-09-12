@@ -601,7 +601,7 @@ mqtt_tcpclient_recon_cb(void *arg, sint8 errType)
 BOOL ICACHE_FLASH_ATTR
 MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_length, int qos, int retain)
 {
-  uint8_t dataBuffer[MQTT_BUF_SIZE];
+  uint8_t *dataBuffer = NULL;
   uint16_t dataLen;
   client->mqtt_state.outbound_message = mqtt_msg_publish(&client->mqtt_state.mqtt_connection,
                                         topic, data, data_length,
@@ -614,10 +614,18 @@ MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_
   MQTT_INFO("MQTT: queuing publish, length: %d, queue size(%d/%d)\r\n", client->mqtt_state.outbound_message->length, client->msgQueue.rb.fill_cnt, client->msgQueue.rb.size);
   while (QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1) {
     MQTT_INFO("MQTT: Queue full\r\n");
+    if (dataBuffer == NULL && (dataBuffer = os_zalloc(MQTT_BUF_SIZE)) == NULL) {
+      MQTT_INFO("MQTT: Out of memory allocating data buffer\r\n");
+      return false;
+    }
     if (QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == -1) {
       MQTT_INFO("MQTT: Serious buffer error\r\n");
+      os_free(dataBuffer);
       return FALSE;
     }
+  }
+  if (dataBuffer != NULL) {
+    os_free(dataBuffer);
   }
   system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
   return TRUE;
@@ -633,7 +641,7 @@ MQTT_Publish(MQTT_Client *client, const char* topic, const char* data, int data_
 BOOL ICACHE_FLASH_ATTR
 MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos)
 {
-  uint8_t dataBuffer[MQTT_BUF_SIZE];
+  uint8_t *dataBuffer = NULL;
   uint16_t dataLen;
 
   client->mqtt_state.outbound_message = mqtt_msg_subscribe(&client->mqtt_state.mqtt_connection,
@@ -642,10 +650,18 @@ MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos)
   MQTT_INFO("MQTT: queue subscribe, topic\"%s\", id: %d\r\n", topic, client->mqtt_state.pending_msg_id);
   while (QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1) {
     MQTT_INFO("MQTT: Queue full\r\n");
+    if (dataBuffer == NULL && (dataBuffer = os_zalloc(MQTT_BUF_SIZE)) == NULL) {
+      MQTT_INFO("MQTT: Out of memory allocating data buffer\r\n");
+      return false;
+    }
     if (QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == -1) {
       MQTT_INFO("MQTT: Serious buffer error\r\n");
+      os_free(dataBuffer);
       return FALSE;
     }
+  }
+  if (dataBuffer != NULL) {
+    os_free(dataBuffer);
   }
   system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 
@@ -661,7 +677,7 @@ MQTT_Subscribe(MQTT_Client *client, char* topic, uint8_t qos)
 BOOL ICACHE_FLASH_ATTR
 MQTT_UnSubscribe(MQTT_Client *client, char* topic)
 {
-  uint8_t dataBuffer[MQTT_BUF_SIZE];
+  uint8_t *dataBuffer = NULL;
   uint16_t dataLen;
   client->mqtt_state.outbound_message = mqtt_msg_unsubscribe(&client->mqtt_state.mqtt_connection,
                                         topic,
@@ -669,10 +685,18 @@ MQTT_UnSubscribe(MQTT_Client *client, char* topic)
   MQTT_INFO("MQTT: queue un-subscribe, topic\"%s\", id: %d\r\n", topic, client->mqtt_state.pending_msg_id);
   while (QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1) {
     MQTT_INFO("MQTT: Queue full\r\n");
+    if (dataBuffer == NULL && (dataBuffer = os_zalloc(MQTT_BUF_SIZE)) == NULL) {
+      MQTT_INFO("MQTT: Out of memory allocating data buffer\r\n");
+      return false;
+    }
     if (QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == -1) {
       MQTT_INFO("MQTT: Serious buffer error\r\n");
+      os_free(dataBuffer);
       return FALSE;
     }
+  }
+  if (dataBuffer != NULL) {
+    os_free(dataBuffer);
   }
   system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
   return TRUE;
@@ -686,7 +710,7 @@ MQTT_UnSubscribe(MQTT_Client *client, char* topic)
 BOOL ICACHE_FLASH_ATTR
 MQTT_Ping(MQTT_Client *client)
 {
-  uint8_t dataBuffer[MQTT_BUF_SIZE];
+  uint8_t *dataBuffer = NULL;
   uint16_t dataLen;
   client->mqtt_state.outbound_message = mqtt_msg_pingreq(&client->mqtt_state.mqtt_connection);
   if (client->mqtt_state.outbound_message->length == 0) {
@@ -696,10 +720,18 @@ MQTT_Ping(MQTT_Client *client)
   MQTT_INFO("MQTT: queuing publish, length: %d, queue size(%d/%d)\r\n", client->mqtt_state.outbound_message->length, client->msgQueue.rb.fill_cnt, client->msgQueue.rb.size);
   while (QUEUE_Puts(&client->msgQueue, client->mqtt_state.outbound_message->data, client->mqtt_state.outbound_message->length) == -1) {
     MQTT_INFO("MQTT: Queue full\r\n");
+    if (dataBuffer == NULL && (dataBuffer = os_zalloc(MQTT_BUF_SIZE)) == NULL) {
+      MQTT_INFO("MQTT: Out of memory allocating data buffer\r\n");
+      return false;
+    }
     if (QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == -1) {
       MQTT_INFO("MQTT: Serious buffer error\r\n");
+      os_free(dataBuffer);
       return FALSE;
     }
+  }
+  if (dataBuffer != NULL) {
+    os_free(dataBuffer);
   }
   system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
   return TRUE;
@@ -709,7 +741,7 @@ void ICACHE_FLASH_ATTR
 MQTT_Task(os_event_t *e)
 {
   MQTT_Client* client = (MQTT_Client*)e->par;
-  uint8_t dataBuffer[MQTT_BUF_SIZE];
+  uint8_t *dataBuffer = NULL;
   uint16_t dataLen;
   if (e->par == 0)
     return;
@@ -752,6 +784,13 @@ MQTT_Task(os_event_t *e)
       if (QUEUE_IsEmpty(&client->msgQueue) || client->sendTimeout != 0) {
         break;
       }
+      
+      dataBuffer = os_zalloc(MQTT_BUF_SIZE);
+      if (dataBuffer == NULL) {
+        MQTT_INFO("MQTT: Could not allocate data buffer for incoming data\r\n");
+        break;
+      }
+
       if (QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == 0) {
         client->mqtt_state.pending_msg_type = mqtt_get_type(dataBuffer);
         client->mqtt_state.pending_msg_id = mqtt_get_id(dataBuffer, dataLen);
@@ -775,6 +814,7 @@ MQTT_Task(os_event_t *e)
         client->mqtt_state.outbound_message = NULL;
         break;
       }
+      os_free(dataBuffer);
       break;
   }
 }
