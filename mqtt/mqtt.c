@@ -387,6 +387,8 @@ READPACKET:
           case MQTT_MSG_TYPE_PUBACK:
             if (client->mqtt_state.pending_msg_type == MQTT_MSG_TYPE_PUBLISH && client->mqtt_state.pending_msg_id == msg_id) {
               MQTT_INFO("MQTT: received MQTT_MSG_TYPE_PUBACK, finish QoS1 publish\r\n");
+              if (client->publishedCb)
+                client->publishedCb((uint32_t*) client);
             }
 
             break;
@@ -405,6 +407,8 @@ READPACKET:
           case MQTT_MSG_TYPE_PUBCOMP:
             if (client->mqtt_state.pending_msg_type == MQTT_MSG_TYPE_PUBLISH && client->mqtt_state.pending_msg_id == msg_id) {
               MQTT_INFO("MQTT: receive MQTT_MSG_TYPE_PUBCOMP, finish QoS2 publish\r\n");
+              if (client->publishedCb)
+                client->publishedCb((uint32_t*) client);
             }
             break;
           case MQTT_MSG_TYPE_PINGREQ:
@@ -460,8 +464,9 @@ mqtt_tcpclient_sent_cb(void *arg)
 
   if ((client->connState == MQTT_DATA || client->connState == MQTT_KEEPALIVE_SEND)
       && client->mqtt_state.pending_msg_type == MQTT_MSG_TYPE_PUBLISH) {
-    if (client->publishedCb)
-      client->publishedCb((uint32_t*)client);
+  MQTT_INFO("MQTT: publish qos = %u\r\n", client->mqtt_state.pending_publish_qos);
+  if (client->publishedCb && client->mqtt_state.pending_publish_qos == 0)
+    client->publishedCb((uint32_t*)client);
   }
   system_os_post(MQTT_TASK_PRIO, 0, (os_param_t)client);
 }
@@ -750,6 +755,7 @@ MQTT_Task(os_event_t *e)
       if (QUEUE_Gets(&client->msgQueue, dataBuffer, &dataLen, MQTT_BUF_SIZE) == 0) {
         client->mqtt_state.pending_msg_type = mqtt_get_type(dataBuffer);
         client->mqtt_state.pending_msg_id = mqtt_get_id(dataBuffer, dataLen);
+        client->mqtt_state.pending_publish_qos = mqtt_msg_get_qos(dataBuffer);
 
 
         client->sendTimeout = MQTT_SEND_TIMOUT;
