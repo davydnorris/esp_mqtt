@@ -20,6 +20,7 @@
 #define STA_PASS "PASS"
 
 #define MQTT_RECONNECT_TIMEOUT  5 /*second*/
+#define MQTT_CONNECT_TIMEOUT    5 /*second*/
 
 #define DEFAULT_SECURITY  0
 #define QUEUE_BUFFER_SIZE       2048
